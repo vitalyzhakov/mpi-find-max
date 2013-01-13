@@ -48,20 +48,15 @@ int main(int argc, char** argv) {
     //MPI::Comm Communicator = new MPI::Comm;
     procCount = MPI::COMM_WORLD.Get_size(); //Uznaem kolichestvo processov
     procIndex = MPI::COMM_WORLD.Get_rank(); //Uznaem nomer tekuschego processa
-    printf("procCount = %d\n", procCount);
     printf("procIndex = %d\n", procIndex);
 
-    int size = 100;
+    int size = 10000;
     if (argc == 2) { //Возможно, аргумент послан из командной строки
         size = atoi(argv[1]);
     }
 
     double startParallel, stopParallel; //Переменные для подсчёта времени
-
-
-    if (procIndex == 0) {
-        printf("Razmer massiva na 0 process = %d\n", size / procCount);
-    }
+    
 
 
     double *a; //Исходный массив
@@ -77,6 +72,9 @@ int main(int argc, char** argv) {
 
     startParallel = MPI_Wtime();
     int recieveSize = size / procCount;
+    if (procIndex == 0) {
+        printf("Array size per process is %d\n", size / procCount);
+    }
 
     procA = (double *) malloc(size * sizeof (double) / procCount);
 
@@ -90,6 +88,8 @@ int main(int argc, char** argv) {
             procMax = procA[i];
         }
     }
+    
+    printf("procMax on process %d is %f\n", procIndex, procMax);
 
     //Sobiraem local maksimumi na host processe i nahodim sredi nih maksimum
     MPI::COMM_WORLD.Reduce(&procMax, &Max, 1, MPI::DOUBLE, MPI::MAX, 0);
