@@ -92,9 +92,10 @@ int main(int argc, char** argv) {
     
     if (procIndex == 0) {
         if (calculatedMax == realMax) {
-            printf("Max parallel=%f\n", calculatedMax);
+            printf("Max parallel = %f\n", calculatedMax);
         } else {
-            printf("No Success Calculation Maximum! U must recalculate this!");
+            printf("No Success Calculation Maximum! You must recalculate this!");
+            return 1;
         }
     }
 
@@ -103,7 +104,7 @@ int main(int argc, char** argv) {
 
     stopParallel = MPI_Wtime();
     if (procIndex == 0) {
-        printf("Execution time= %f, process count= %d, size= %d\n", stopParallel - startParallel);
+        printf("Execution time= %f, process count= %d, size= %d\n", stopParallel - startParallel, procCount, size);
     }
 
     MPI::Finalize(); //Zavershaem parallelnuyu sekciyu
