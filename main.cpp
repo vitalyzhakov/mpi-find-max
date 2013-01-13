@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
         size = atoi(argv[1]);
     }
 
-    double StartPar, StopPar, StartSeq, StopSeq; //Variables 4 time
+    double StartPar, StopPar; //Variables 4 time
     int ProcNum, ProcRank; //ProcNum - kolichestvo processov, ProcRank - nomer processa
 
     MPI_Init(&argc, &argv); //Nachalo MPI-sekcii
@@ -42,8 +42,7 @@ int main(int argc, char** argv) {
     double Max;
     double ideal_max;
 
-    if (ProcRank == 0) //Zabivaem randomnii massiv v pamyat host-processa
-    {
+    if (ProcRank == 0) {//Zabivaem randomnii massiv v pamyat host-processa
         srand(time(0));
         a = (double *) malloc(size * ProcNum * sizeof (double));
         ideal_max = randInit(a, size * ProcNum);
@@ -59,17 +58,20 @@ int main(int argc, char** argv) {
     //Ishem local maksimum v etih porciyah
     procMax = procA[0];
     int i;
-    for (i = 0; i < size; i++)
+    for (i = 0; i < size; i++) {
         if (procA[i] > procMax) procMax = procA[i];
+    }
 
     //Sobiraem local maksimumi na host processe i nahodim sredi nih maksimum
     MPI_Reduce(&procMax, &Max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (ProcRank == 0) {
-        if (Max == ideal_max)
+        if (Max == ideal_max) {
             printf("Max parallel=%f\n", Max);
-        else
+        }
+        else {
             printf("No Success Calculation Maximum! U must recalculate this!");
+        }
     }
 
     StopPar = MPI_Wtime();
