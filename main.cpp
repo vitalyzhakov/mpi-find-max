@@ -45,12 +45,10 @@ int main(int argc, char** argv) {
     int procCount, procIndex; //ProcNum - kolichestvo processov, ProcRank - nomer processa
 
     
-    //MPI::Comm Communicator = new MPI::Comm;
     procCount = MPI::COMM_WORLD.Get_size(); //Uznaem kolichestvo processov
     procIndex = MPI::COMM_WORLD.Get_rank(); //Uznaem nomer tekuschego processa
-    printf("procIndex = %d\n", procIndex);
 
-    int size = 10000;
+    int size = 64000000;
     if (argc == 2) { //Возможно, аргумент послан из командной строки
         size = atoi(argv[1]);
     }
@@ -62,12 +60,12 @@ int main(int argc, char** argv) {
     double *a; //Исходный массив
     double *procA;
     double procMax;
-    double Max;
-    double ideal_max;
+    double calculatedMax;
+    double realMax;
 
     if (procIndex == 0) { //Zabivaem randomnii massiv v pamyat host-processa
         a = (double *) malloc(size * sizeof (double));
-        ideal_max = initRandVector(a, size);
+        realMax = initRandVector(a, size);
     }
 
     startParallel = MPI_Wtime();
@@ -80,23 +78,21 @@ int main(int argc, char** argv) {
 
     //Rassilaem ravnie porcii massiva po processam
     MPI::COMM_WORLD.Scatter(a, recieveSize, MPI::DOUBLE, procA, recieveSize, MPI::DOUBLE, 0);
-
+    
     //Ishem local maksimum v etih porciyah
     procMax = procA[0];
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < recieveSize; i++) {
         if (procA[i] > procMax) {
             procMax = procA[i];
         }
     }
     
-    printf("procMax on process %d is %f\n", procIndex, procMax);
-
     //Sobiraem local maksimumi na host processe i nahodim sredi nih maksimum
-    MPI::COMM_WORLD.Reduce(&procMax, &Max, 1, MPI::DOUBLE, MPI::MAX, 0);
-
+    MPI::COMM_WORLD.Reduce(&procMax, &calculatedMax, 1, MPI::DOUBLE, MPI::MAX, 0);
+    
     if (procIndex == 0) {
-        if (Max == ideal_max) {
-            printf("Max parallel=%f\n", Max);
+        if (calculatedMax == realMax) {
+            printf("Max parallel=%f\n", calculatedMax);
         } else {
             printf("No Success Calculation Maximum! U must recalculate this!");
         }
@@ -107,9 +103,9 @@ int main(int argc, char** argv) {
 
     stopParallel = MPI_Wtime();
     if (procIndex == 0) {
-        printf("Time parallel = %f\n", stopParallel - startParallel);
+        printf("Execution time= %f, process count= %d, size= %d\n", stopParallel - startParallel);
     }
 
     MPI::Finalize(); //Zavershaem parallelnuyu sekciyu
-    return 0; //VOZVRASHAEM OVAL oO
+    return 0;
 }
