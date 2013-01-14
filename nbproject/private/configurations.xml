@@ -25,8 +25,8 @@
       <runprofile version="9">
         <runcommandpicklist>
           <runcommandpicklistitem>"${OUTPUT_PATH}"</runcommandpicklistitem>
-          <runcommandpicklistitem>mpirun -np 100 "${OUTPUT_PATH}"</runcommandpicklistitem>
           <runcommandpicklistitem>mpirun -np 2 "${OUTPUT_PATH}"</runcommandpicklistitem>
+          <runcommandpicklistitem>mpirun -np 100 "${OUTPUT_PATH}"</runcommandpicklistitem>
           <runcommandpicklistitem>mpirun -np 4 "${OUTPUT_PATH}"</runcommandpicklistitem>
         </runcommandpicklist>
         <runcommand>mpirun -np 4 "${OUTPUT_PATH}"</runcommand>

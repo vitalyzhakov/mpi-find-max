@@ -34,6 +34,10 @@
         <compilerSet>mpich|GNU</compilerSet>
       </toolsSet>
       <compileType>
+        <ccTool>
+          <stripSymbols>true</stripSymbols>
+          <architecture>2</architecture>
+        </ccTool>
       </compileType>
     </conf>
     <conf name="Release" type="1">

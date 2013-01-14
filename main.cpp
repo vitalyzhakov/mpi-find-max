@@ -3,6 +3,8 @@
  * Author: zhakov
  * 
  * Ищем максимум в массиве средствами MPI
+ * Генерируем элементы на процессах, 
+ * потом считаем результат в процессе и собираем его
  *
  * Created on 13 Январь 2013 г., 14:51
  */
@@ -10,25 +12,31 @@
 #include <mpi.h>
 #include <cstdlib>
 #include <stdio.h>
+#include <string.h>
 
+//Режимы заполнения вектора
+#define FILL_MODE_NOT_RANDOM 0
+#define FILL_MODE_RANDOM 1
 
 /**
- * Инициализация верктора случайными значениями
+ * Заполняем вектор
  * 
- * @param a - вектор, который нужно заполнить
- * @param n - длина вектора
- * @return double - реальный максимум
+ * @param vector - вектор, который нужно заполнить
+ * @param vSize - размер этого вектора
+ * @param mode - режим заполнения (случайный/не случайный)
+ * @param procIndex - номер процесса в коммуникаторе MPI
+ * @return 
  */
-double initRandVector(double *a, unsigned int n) {
-    double real_max;
-    real_max = 0;
-    for (unsigned int i = 0; i < n; i++) {
-        a[i] = rand() / (double) RAND_MAX;
-        if (a[i] > real_max) {
-            real_max = a[i];
+int initVector(double *vector, unsigned int vSize, unsigned int fillMode, unsigned int procIndex) {
+
+    for (unsigned int i = 0; i < vSize; i++) {
+        if (fillMode == FILL_MODE_RANDOM) {
+            vector[i] = rand() / (double) RAND_MAX;
+        } else {
+            vector[i] = procIndex;
         }
     }
-    return real_max;
+    return 0;
 }
 
 /**
@@ -39,74 +47,89 @@ double initRandVector(double *a, unsigned int n) {
  * @return 
  */
 int main(int argc, char** argv) {
-    
+
     MPI::Init(argc, argv); //Nachalo MPI-sekcii
+    
+    //Размер вектора
+    unsigned int vSize = 1000000;
+    if (argc == 2) { //Возможно, аргумент послан из командной строки
+        vSize = atoi(argv[1]);
+    }
+
+    //Режим заполнения вектора
+    unsigned int fillMode = FILL_MODE_NOT_RANDOM;
+    if (argc == 3) {
+        if (strcmp("-random", argv[3])) {
+            fillMode = FILL_MODE_RANDOM;
+        }
+    }
 
     int procCount, procIndex; //ProcNum - kolichestvo processov, ProcRank - nomer processa
 
-    
+
     procCount = MPI::COMM_WORLD.Get_size(); //Uznaem kolichestvo processov
     procIndex = MPI::COMM_WORLD.Get_rank(); //Uznaem nomer tekuschego processa
 
-    unsigned int size = 64000000;
-    if (argc == 2) { //Возможно, аргумент послан из командной строки
-        size = atoi(argv[1]);
-    }
-
-    double startParallel, stopParallel; //Переменные для подсчёта времени
     
 
+    double startParallel, stopParallel; //Переменные для подсчёта времени
+    startParallel = MPI_Wtime();
 
-    double *a; //Исходный массив
-    double *procA;
+
+    double *dataVector; //Исходный массив
     double procMax;
     double calculatedMax;
     double realMax;
 
-    if (procIndex == 0) { //Zabivaem randomnii massiv v pamyat host-processa
-        a = (double *) malloc(size * sizeof (double));
-        realMax = initRandVector(a, size);
-    }
+    //Генерим в массивы случайные числа
+    dataVector = (double *) malloc(vSize * sizeof (double));
+    realMax = initVector(dataVector, vSize, fillMode, procIndex);
 
-    startParallel = MPI_Wtime();
-    unsigned int recieveSize = size / procCount;
+
+    //unsigned int recieveSize = size / procCount;
     if (procIndex == 0) {
-        printf("Array size per process is %u\n", size / procCount);
+        printf("Array size per process is %u\n", vSize);
     }
 
-    procA = (double *) malloc(size * sizeof (double) / procCount);
 
-    //Rassilaem ravnie porcii massiva po processam
-    MPI::COMM_WORLD.Scatter(a, recieveSize, MPI::DOUBLE, procA, recieveSize, MPI::DOUBLE, 0);
-    
-    //Ishem local maksimum v etih porciyah
-    procMax = procA[0];
-    for (unsigned int i = 0; i < recieveSize; i++) {
-        if (procA[i] > procMax) {
-            procMax = procA[i];
+    //Ищем локальный максимум в этих процессах
+    procMax = dataVector[0];
+    for (unsigned int i = 0; i < vSize; i++) {
+        if (dataVector[i] > procMax) {
+            procMax = dataVector[i];
         }
     }
-    
-    //Sobiraem local maksimumi na host processe i nahodim sredi nih maksimum
+
+    //Редукция: собираем локальные максимумы на каждом процессе в процесс с номером 0
     MPI::COMM_WORLD.Reduce(&procMax, &calculatedMax, 1, MPI::DOUBLE, MPI::MAX, 0);
-    
+
+    //Проверка на правильность, если включен соответствующий режим генерации
     if (procIndex == 0) {
-        if (calculatedMax == realMax) {
-            printf("Max parallel = %f\n", calculatedMax);
-        } else {
-            printf("No Success Calculation Maximum! You must recalculate this!");
-            return 1;
-        }
+        //Мы можем проверить, если массивы заполнялись числами в соответствии с номерами процессов
+        if (fillMode == FILL_MODE_NOT_RANDOM) {
+            if (calculatedMax == procCount - 1) {
+                printf("Max parallel = %f\n", calculatedMax);
+            } else {
+                printf("No Success Calculation Maximum! You must recalculate this!");
+                return 1;
+            }
+        }//Иначе цифры случайные - ничего не делаем
     }
 
 
-
-
+    //Заканчиваем сбор времени
     stopParallel = MPI_Wtime();
+    //Выводим строку-результат на нулевом процессе
     if (procIndex == 0) {
-        printf("Execution time= %f, process count= %d, size= %u\n", stopParallel - startParallel, procCount, size);
+        printf("Execution time= %f, process count= %d, size= %u\n",
+                stopParallel - startParallel,
+                procCount,
+                vSize
+                );
     }
 
-    MPI::Finalize(); //Zavershaem parallelnuyu sekciyu
+    //Zavershaem parallelnuyu sekciyu
+    MPI::Finalize();
+    
     return 0;
 }
