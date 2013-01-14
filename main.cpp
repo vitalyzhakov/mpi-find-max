@@ -19,10 +19,10 @@
  * @param n - длина вектора
  * @return double - реальный максимум
  */
-double initRandVector(double *a, int n) {
+double initRandVector(double *a, unsigned int n) {
     double real_max;
     real_max = 0;
-    for (int i = 0; i < n; i++) {
+    for (unsigned int i = 0; i < n; i++) {
         a[i] = rand() / (double) RAND_MAX;
         if (a[i] > real_max) {
             real_max = a[i];
@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     procCount = MPI::COMM_WORLD.Get_size(); //Uznaem kolichestvo processov
     procIndex = MPI::COMM_WORLD.Get_rank(); //Uznaem nomer tekuschego processa
 
-    int size = 64000000;
+    unsigned int size = 64000000;
     if (argc == 2) { //Возможно, аргумент послан из командной строки
         size = atoi(argv[1]);
     }
@@ -69,9 +69,9 @@ int main(int argc, char** argv) {
     }
 
     startParallel = MPI_Wtime();
-    int recieveSize = size / procCount;
+    unsigned int recieveSize = size / procCount;
     if (procIndex == 0) {
-        printf("Array size per process is %d\n", size / procCount);
+        printf("Array size per process is %u\n", size / procCount);
     }
 
     procA = (double *) malloc(size * sizeof (double) / procCount);
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     
     //Ishem local maksimum v etih porciyah
     procMax = procA[0];
-    for (int i = 0; i < recieveSize; i++) {
+    for (unsigned int i = 0; i < recieveSize; i++) {
         if (procA[i] > procMax) {
             procMax = procA[i];
         }
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
 
     stopParallel = MPI_Wtime();
     if (procIndex == 0) {
-        printf("Execution time= %f, process count= %d, size= %d\n", stopParallel - startParallel, procCount, size);
+        printf("Execution time= %f, process count= %d, size= %u\n", stopParallel - startParallel, procCount, size);
     }
 
     MPI::Finalize(); //Zavershaem parallelnuyu sekciyu
